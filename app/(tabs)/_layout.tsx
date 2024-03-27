@@ -6,6 +6,7 @@ import { Pressable, TouchableOpacity } from 'react-native';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
+import { useAuth } from '@clerk/clerk-expo';
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -17,6 +18,7 @@ function TabBarIcon(props: {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { isSignedIn } = useAuth();
 
   return (
     <Tabs
@@ -56,7 +58,7 @@ export default function TabLayout() {
           title: 'Library',
           tabBarIcon: ({ color }) => <TabBarIcon name="book" color={color} />,
           headerRight: () => (
-            <Link href="/(modals)/login" asChild>
+            <Link href={isSignedIn ? '/(modals)/profile' : '/(modals)/login'} asChild>
               <Pressable>
                 {({ pressed }) => (
                   <FontAwesome
