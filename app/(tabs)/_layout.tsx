@@ -1,22 +1,23 @@
 import React from 'react';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Link, Tabs } from 'expo-router';
-import { Pressable, TouchableOpacity } from 'react-native';
+import { FontAwesome5 } from '@expo/vector-icons';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useAuth } from '@clerk/clerk-expo';
+import { Link, Tabs } from 'expo-router';
+import { Pressable } from 'react-native';
 
-// You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
-function TabBarIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>['name'];
+type TabBarIconProps = {
+  name: string;
   color: string;
-}) {
-  return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
-}
+};
 
-export default function TabLayout() {
+const TabBarIcon = (props: TabBarIconProps) => (
+  <FontAwesome5 size={28} style={{ marginBottom: -3 }} {...props} />
+);
+
+const TabLayout = () => {
   const colorScheme = useColorScheme();
   const { isSignedIn } = useAuth();
 
@@ -58,10 +59,10 @@ export default function TabLayout() {
           title: 'Library',
           tabBarIcon: ({ color }) => <TabBarIcon name="book" color={color} />,
           headerRight: () => (
-            <Link href={isSignedIn ? '/(modals)/profile' : '/(modals)/login'} asChild>
+            <Link href={isSignedIn ? 'profile' : '/(modals)/login'} asChild>
               <Pressable>
                 {({ pressed }) => (
-                  <FontAwesome
+                  <FontAwesome5
                     name="user-circle"
                     size={25}
                     color={Colors[colorScheme ?? 'light'].text}
@@ -75,4 +76,6 @@ export default function TabLayout() {
       />
     </Tabs>
   );
-}
+};
+
+export default TabLayout;
