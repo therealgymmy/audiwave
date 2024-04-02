@@ -1,10 +1,5 @@
-export interface ApplePodcastSearchResultList {
-  resultCount: number;
-  results: ApplePodcastSearchResult[];
-}
-
-export interface ApplePodcastSearchResult {
-  wrapperType: string;
+interface ApplePodcastSearchResult_Podcast {
+  wrapperType: 'track';
   kind: string;
   artistId?: number;
   collectionId: number;
@@ -38,12 +33,60 @@ export interface ApplePodcastSearchResult {
   genres: string[];
 }
 
-export const searchMostRecentPodcasts = async (
-  episodes: number = 50
-): Promise<ApplePodcastSearchResultList> => {
-  // TODO: update this to actually show recent episodes
+interface ApplePodcastSearchResult_Episode {
+  wrapperType: 'podcastEpisode';
+  kind: string;
+  feedUrl: string;
+  episodeUrl: string;
+  description: string;
+  trackId: number;
+  trackName: string;
+  shortDescription: string;
+  releaseDate: string;
+  closedCaptioning: string;
+  collectionId: number;
+  collectionName: string;
+  artistIds: number[];
+  country: string;
+  artworkUrl60: string;
+  artistViewUrl: string;
+  contentAdvisoryRating: string;
+  trackViewUrl: string;
+  previewUrl: string;
+  artworkUrl600: string;
+  episodeContentType: string;
+  episodeFileExtension: string;
+  collectionViewUrl: string;
+  trackTimeMillis: number;
+  artworkUrl160: string;
+  genres: {
+    name: string;
+    id: string;
+  };
+  episodeGuid: string;
+}
+
+export type ApplePodcastSearchResult =
+  | ApplePodcastSearchResult_Podcast
+  | ApplePodcastSearchResult_Episode;
+
+export const fetchPodcasts = async (
+  listings: number
+): Promise<ApplePodcastSearchResult[]> => {
   const response = await fetch(
-    `https://itunes.apple.com/search?term=podcast&media=podcast&limit=${episodes}`
+    `https://itunes.apple.com/search?term=podcast&media=podcast&limit=${listings}`
   );
-  return response.json();
+  return response.json().then((res) => res.results);
+};
+
+export const searchMostRecentEpisodesForPodcast = async (
+  podcastId: number,
+  listings: number
+): Promise<ApplePodcastSearchResult[]> => {
+  const response = await fetch(
+    `https://itunes.apple.com/lookup?id=${podcastId}&entity=podcastEpisode&limit=${listings}&sort=recent`
+  );
+  return response
+    .json()
+    .then((res) => (res.resultCount > 1 ? res.results.slice(1) : []));
 };

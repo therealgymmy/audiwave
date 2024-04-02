@@ -1,32 +1,38 @@
 import React, { useEffect, useState } from 'react';
-import { FlatList, Text, Image, View, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Image,
+  Text,
+  TouchableOpacity,
+  Alert,
+  FlatList,
+} from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import {
   ApplePodcastSearchResult,
-  fetchPodcasts,
+  searchMostRecentEpisodesForPodcast,
 } from '@/components/searchApplePodcast';
-import { useRouter } from 'expo-router';
 
-export default function Feed() {
+const Podcast = () => {
+  const { id } = useLocalSearchParams();
   const [episodes, setEpisodes] = useState<ApplePodcastSearchResult[]>([]);
 
   useEffect(() => {
     const fetchEpisodes = async () => {
-      const response = await fetchPodcasts(20);
-      setEpisodes(response);
+      const response = await searchMostRecentEpisodesForPodcast(
+        parseInt(id as string),
+        20
+      );
+      return response;
     };
-    fetchEpisodes();
+    fetchEpisodes().then((response) => setEpisodes(response));
   }, []);
 
-  const router = useRouter();
-  const navigateToPodcast = (id: number) => {
-    router.push(`/podcast/${id}`);
-  };
-
   const renderItem = ({ item }: { item: ApplePodcastSearchResult }) => {
-    return item.wrapperType === 'track' ? (
+    return item.wrapperType === 'podcastEpisode' ? (
       <TouchableOpacity
         activeOpacity={0.5}
-        onPress={() => navigateToPodcast(item.collectionId)}
+        onPress={() => Alert.alert('Url: ', item.episodeUrl)}
       >
         <View
           style={{
@@ -53,16 +59,6 @@ export default function Feed() {
                   ? item.trackName.substring(0, 35) + '...'
                   : item.trackName}
               </Text>
-              <Text>
-                {item.artistName.length > 35
-                  ? item.artistName.substring(0, 35) + '...'
-                  : item.artistName}
-              </Text>
-              <Text>
-                {item.primaryGenreName.length > 35
-                  ? item.primaryGenreName.substring(0, 35) + '...'
-                  : item.primaryGenreName}
-              </Text>
             </View>
             <View
               style={{
@@ -88,4 +84,6 @@ export default function Feed() {
       />
     </View>
   );
-}
+};
+
+export default Podcast;

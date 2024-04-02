@@ -109,6 +109,7 @@ const RootLayoutNav = () => {
             ),
           }}
         />
+        <Stack.Screen name="podcast/[id]" options={{ headerTitle: '' }} />
       </Stack>
     </ThemeProvider>
   );
