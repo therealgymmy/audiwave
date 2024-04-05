@@ -5,6 +5,7 @@ import {
   DefaultTheme,
   ThemeProvider,
 } from '@react-navigation/native';
+import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-av';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -58,6 +59,22 @@ const RootLayoutNav = () => {
     }
   }, [isLoaded]);
 
+  useEffect(() => {
+    const setAudioMode = async () => {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+        interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
+        playThroughEarpieceAndroid: false,
+        staysActiveInBackground: true,
+      });
+    };
+
+    setAudioMode();
+  }, []);
+
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
@@ -110,6 +127,7 @@ const RootLayoutNav = () => {
           }}
         />
         <Stack.Screen name="podcast/[id]" options={{ headerTitle: '' }} />
+        <Stack.Screen name="audio/[id]" options={{ headerTitle: '' }} />
       </Stack>
     </ThemeProvider>
   );

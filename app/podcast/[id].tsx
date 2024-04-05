@@ -1,13 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Image,
-  Text,
-  TouchableOpacity,
-  Alert,
-  FlatList,
-} from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { View, Image, Text, TouchableOpacity, FlatList } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useAtom } from 'jotai';
+import { podcastEpisodeAtom } from '@/components/podcastState';
 import {
   ApplePodcastSearchResult,
   searchMostRecentEpisodesForPodcast,
@@ -16,6 +11,7 @@ import {
 const Podcast = () => {
   const { id } = useLocalSearchParams();
   const [episodes, setEpisodes] = useState<ApplePodcastSearchResult[]>([]);
+  const [, setPodcastEpisode] = useAtom(podcastEpisodeAtom);
 
   useEffect(() => {
     const fetchEpisodes = async () => {
@@ -28,11 +24,23 @@ const Podcast = () => {
     fetchEpisodes().then((response) => setEpisodes(response));
   }, []);
 
+  const router = useRouter();
+  const navigateToAudioPlayer = (
+    trackId: number,
+    episodeUrl: string,
+    episode: ApplePodcastSearchResult
+  ) => {
+    setPodcastEpisode(episode);
+    router.push(`/audio/${trackId}`);
+  };
+
   const renderItem = ({ item }: { item: ApplePodcastSearchResult }) => {
     return item.wrapperType === 'podcastEpisode' ? (
       <TouchableOpacity
         activeOpacity={0.5}
-        onPress={() => Alert.alert('Url: ', item.episodeUrl)}
+        onPress={() =>
+          navigateToAudioPlayer(item.trackId, item.episodeUrl, item)
+        }
       >
         <View
           style={{

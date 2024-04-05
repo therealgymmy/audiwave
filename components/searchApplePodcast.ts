@@ -1,4 +1,4 @@
-interface ApplePodcastSearchResult_Podcast {
+export interface ApplePodcastSearchResult_Podcast {
   wrapperType: 'track';
   kind: string;
   artistId?: number;
@@ -33,7 +33,7 @@ interface ApplePodcastSearchResult_Podcast {
   genres: string[];
 }
 
-interface ApplePodcastSearchResult_Episode {
+export interface ApplePodcastSearchResult_Episode {
   wrapperType: 'podcastEpisode';
   kind: string;
   feedUrl: string;
@@ -89,4 +89,11 @@ export const searchMostRecentEpisodesForPodcast = async (
   return response
     .json()
     .then((res) => (res.resultCount > 1 ? res.results.slice(1) : []));
+};
+
+export const lookupEpisode = async (podcastId: number) => {
+  const response = await fetch(
+    `https://itunes.apple.com/lookup?id=${podcastId}`
+  );
+  return response.json().then((res) => res.results);
 };
