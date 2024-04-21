@@ -2,16 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { View, Image, Text, TouchableOpacity, FlatList } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAtom } from 'jotai';
-import { podcastEpisodeAtom } from '@/components/podcastState';
+import {
+  makePodcastEpisodeMetadata,
+  podcastEpisodeMetadataAtom,
+} from '@/components/podcastState';
 import {
   ApplePodcastSearchResult,
+  ApplePodcastSearchResult_Episode,
   searchMostRecentEpisodesForPodcast,
 } from '@/components/searchApplePodcast';
 
 const Podcast = () => {
   const { id } = useLocalSearchParams();
   const [episodes, setEpisodes] = useState<ApplePodcastSearchResult[]>([]);
-  const [, setPodcastEpisode] = useAtom(podcastEpisodeAtom);
+  const [, setPodcastEpisodeMetadata] = useAtom(podcastEpisodeMetadataAtom);
 
   useEffect(() => {
     const fetchEpisodes = async () => {
@@ -27,10 +31,14 @@ const Podcast = () => {
   const router = useRouter();
   const navigateToAudioPlayer = (
     trackId: number,
-    episodeUrl: string,
     episode: ApplePodcastSearchResult
   ) => {
-    setPodcastEpisode(episode);
+    setPodcastEpisodeMetadata(
+      makePodcastEpisodeMetadata(
+        episode as ApplePodcastSearchResult_Episode,
+        'TODO: arist-name: jimmy'
+      )
+    );
     router.push(`/audio/${trackId}`);
   };
 
@@ -38,9 +46,7 @@ const Podcast = () => {
     return item.wrapperType === 'podcastEpisode' ? (
       <TouchableOpacity
         activeOpacity={0.5}
-        onPress={() =>
-          navigateToAudioPlayer(item.trackId, item.episodeUrl, item)
-        }
+        onPress={() => navigateToAudioPlayer(item.trackId, item)}
       >
         <View
           style={{

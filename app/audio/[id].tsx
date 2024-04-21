@@ -3,15 +3,16 @@ import { StyleSheet, View, Text, Image, TouchableOpacity } from 'react-native';
 import { AVPlaybackStatus, Audio } from 'expo-av';
 import { useLocalSearchParams } from 'expo-router';
 import { useAtom } from 'jotai';
-import { podcastEpisodeAtom } from '@/components/podcastState';
+import { podcastEpisodeMetadataAtom } from '@/components/podcastState';
 import { FontAwesome } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
+import * as FileSystem from 'expo-file-system';
 
 const AudioPlayer = () => {
   const { id } = useLocalSearchParams();
   const [sound, setSound] = useState<Audio.Sound>();
   const [isPlaying, setIsPlaying] = useState(false);
-  const [podcastEpisode] = useAtom(podcastEpisodeAtom);
+  const [podcastEpisodeMetadata] = useAtom(podcastEpisodeMetadataAtom);
   const [currentPositionMillis, setCurrentPositionMillis] = useState(0);
 
   const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
@@ -43,34 +44,92 @@ const AudioPlayer = () => {
   };
 
   const handleSliderChange = async (value: number) => {
-    const newPositionMillis = value * (podcastEpisode.trackTimeMillis || 1);
+    const newPositionMillis = value * (podcastEpisodeMetadata.durationMs || 1);
     await sound?.setPositionAsync(newPositionMillis);
     setCurrentPositionMillis(newPositionMillis);
   };
 
-  useEffect(() => {
-    const loadSound = async () => {
-      if (podcastEpisode.wrapperType !== 'podcastEpisode') {
-        return;
+  const downloadAndCacheAudio = async () => {
+    if (FileSystem.documentDirectory === null) {
+      console.log('Download error: FileSystem.documentDirectory is null');
+      return;
+    }
+
+    const uri = podcastEpisodeMetadata.audioUrl;
+    const filename = uri.split('/').pop();
+    const fileUri = FileSystem.documentDirectory + filename;
+    const fileInfo = await FileSystem.getInfoAsync(fileUri);
+
+    if (fileInfo.exists) {
+      console.log('Audio already cached at', fileInfo.uri);
+      return;
+    }
+
+    console.log('Downloading and caching audio');
+
+    const downloadResumable = FileSystem.createDownloadResumable(
+      uri,
+      fileUri,
+      {},
+      (downloadProgress) => {
+        const progress =
+          downloadProgress.totalBytesWritten /
+          downloadProgress.totalBytesExpectedToWrite;
+        console.log(
+          `Downloading progress: ${Math.round(progress * 100)}% == ${
+            downloadProgress.totalBytesWritten
+          } / ${downloadProgress.totalBytesExpectedToWrite}`
+        );
+        // Update your UI or state with the download progress here
       }
+    );
 
-      console.log('Loading Sound');
-      const url = podcastEpisode.episodeUrl;
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: url },
-        { shouldPlay: true }
-      );
+    try {
+      await downloadResumable
+        .downloadAsync()
+        .then((uri) => {
+          console.log('Finished downloading to', uri);
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    } catch (error) {
+      console.error('Error downloading or caching audio', error);
+    }
+  };
 
-      sound.setOnPlaybackStatusUpdate(onPlaybackStatusUpdate);
+  const loadSound = async () => {
+    console.log('Checking for cached audio');
+    if (FileSystem.documentDirectory === null) {
+      console.log('Load error: FileSystem.documentDirectory is null');
+      return;
+    }
+    const filename = podcastEpisodeMetadata.audioUrl.split('/').pop();
+    const fileUri = FileSystem.documentDirectory + filename;
+    const fileInfo = await FileSystem.getInfoAsync(fileUri);
 
-      setSound(sound);
-      setIsPlaying(true);
+    let source = { uri: podcastEpisodeMetadata.audioUrl }; // Default to loading from URL
+    if (fileInfo.exists) {
+      source = { uri: fileInfo.uri }; // If cached, load from the local file system
+    }
+    console.log('Loading audio:', source.uri);
 
-      console.log('Playing:', url);
-      await sound.playAsync();
-    };
+    const { sound } = await Audio.Sound.createAsync(source, {
+      shouldPlay: true,
+    });
+
+    sound.setOnPlaybackStatusUpdate(onPlaybackStatusUpdate);
+
+    setSound(sound);
+    setIsPlaying(true);
+
+    console.log('Playing:', source.uri);
+    await sound.playAsync();
+  };
+
+  useEffect(() => {
     loadSound();
-  }, [id]);
+  }, [id, podcastEpisodeMetadata]);
 
   useEffect(() => {
     return sound
@@ -81,26 +140,18 @@ const AudioPlayer = () => {
       : undefined;
   }, [sound]);
 
-  useEffect(() => {
-    if (id !== podcastEpisode.trackId.toString()) {
-      console.log(
-        'Err: Podcast episode mismatch! Expected:',
-        id,
-        'Actual:',
-        podcastEpisode.trackId
-      );
-    }
-  }, [id, podcastEpisode]);
-
   return (
     <View style={styles.container}>
       <Image
-        source={{ uri: podcastEpisode.artworkUrl600 }}
+        source={{ uri: podcastEpisodeMetadata.artworkUrl }}
         style={styles.backgroundImage}
       />
       <View style={styles.overlay}>
-        <Text style={styles.trackTitle}>{podcastEpisode.trackName}</Text>
-        <Text style={styles.artist}>{'TODO: placeholder'}</Text>
+        <Text style={styles.trackTitle}>{podcastEpisodeMetadata.title}</Text>
+        <Text style={styles.artist}>{podcastEpisodeMetadata.artistName}</Text>
+        <Text style={styles.description}>
+          {podcastEpisodeMetadata.description}
+        </Text>
         <View style={styles.controls}>
           {!sound ? (
             <FontAwesome name="dot-circle-o" size={70} color="white" />
@@ -155,7 +206,7 @@ const AudioPlayer = () => {
               minimumValue={0}
               maximumValue={1}
               value={
-                currentPositionMillis / (podcastEpisode.trackTimeMillis || 1)
+                currentPositionMillis / (podcastEpisodeMetadata.durationMs || 1)
               }
               onValueChange={handleSliderChange}
               minimumTrackTintColor="#FFFFFF"
@@ -165,6 +216,12 @@ const AudioPlayer = () => {
             <></>
           )}
         </View>
+        <TouchableOpacity
+          style={styles.downloadButton}
+          onPress={downloadAndCacheAudio}
+        >
+          <Text style={styles.downloadButtonText}>Download</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -198,6 +255,10 @@ const styles = StyleSheet.create({
     color: 'white',
     marginBottom: 24,
   },
+  description: {
+    fontSize: 14,
+    color: 'white',
+  },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -206,6 +267,16 @@ const styles = StyleSheet.create({
   },
   controlButton: {
     marginHorizontal: 16,
+  },
+  downloadButton: {
+    backgroundColor: 'blue',
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 20,
+  },
+  downloadButtonText: {
+    color: 'white',
+    fontSize: 16,
   },
 });
 
